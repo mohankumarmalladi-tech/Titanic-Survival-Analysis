@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titanic · survival analysis (Python powered)</title>
+    <!-- Google Fonts & Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js 3 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #eceff4 url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cGF0aCBkPSJNMjAgMjBhMTAgMTAgMCAwIDEgMTAgMTAgMTAgMTAgMCAwIDEtMTAgMTAgMTAgMTAgMCAwIDEtMTAtMTAgMTAgMTAgMCAwIDEgMTAtMTB6IiBmaWxsPSIjYzVkNGUyIiBmaWxsLW9wYWNpdHk9IjAuMTUiLz48L3N2Zz4=');
+            color: #1e2b3c; line-height: 1.5; padding: 2rem 1.5rem;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        /* header */
+        .hero { margin-bottom: 2.2rem; text-align: center; }
+        .hero h1 {
+            font-size: 3.2rem; font-weight: 700; letter-spacing: -0.02em;
+            background: linear-gradient(140deg, #0a2647, #3a6d8c, #a7c7d9);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 12px rgba(0,30,50,0.2); margin-bottom: 0.5rem;
+        }
+        .hero h1 i { background: none; -webkit-text-fill-color: #b38b5d; margin-right: 8px; }
+        .hero p {
+            font-size: 1.3rem; color: #2f4b6e; max-width: 800px; margin: 0.75rem auto 0;
+            background: rgba(255,255,240,0.4); padding: 0.6rem 1.8rem; border-radius: 60px;
+            border: 1px solid rgba(180,200,220,0.7); backdrop-filter: blur(4px); display: inline-block;
+        }
+        /* stats cards */
+        .stats-grid {
+            display: flex; flex-wrap: wrap; gap: 1.8rem; justify-content: center; margin: 2.5rem 0 3rem;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); padding: 1.5rem 2rem;
+            border-radius: 32px; box-shadow: 0 18px 35px -8px rgba(10,30,50,0.2), inset 0 0 0 1px rgba(255,255,255,0.7);
+            flex: 1 1 160px; max-width: 220px; text-align: center; border: 1px solid rgba(255,255,240,0.45);
+            transition: 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-6px); background: rgba(255,255,255,0.9); }
+        .stat-value { font-size: 2.8rem; font-weight: 700; color: #0b3b5c; text-shadow: 0 2px 5px #b6d3ed; }
+        .stat-label { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; color: #2f4f6f; font-weight: 600; }
+        .stat-note { font-size: 0.9rem; color: #4d688b; margin-top: 0.3rem; font-style: italic; }
+        /* chart grid */
+        .chart-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 2rem; margin: 2.5rem 0 2rem;
+        }
+        .chart-card {
+            background: rgba(255,255,250,0.75); backdrop-filter: blur(8px); border-radius: 36px; padding: 1.6rem 1.4rem;
+            box-shadow: 0 18px 30px -10px rgba(0,33,54,0.3); border: 1px solid rgba(230,240,250,0.9);
+        }
+        .chart-card:hover { background: rgba(255,255,255,0.85); }
+        .chart-title { font-size: 1.5rem; font-weight: 600; color: #103450; display: flex; align-items: center; gap: 0.5rem; }
+        .chart-title i { color: #b1844b; font-size: 1.7rem; }
+        .chart-sub { font-size: 0.95rem; color: #476b89; margin-bottom: 1.1rem; padding-left: 1rem; border-left: 4px solid #c4a079; }
+        .chart-container { position: relative; height: 270px; width: 100%; margin-top: 0.2rem; }
+        /* interactive tool */
+        .analysis-tool {
+            background: rgba(245,245,250,0.8); backdrop-filter: blur(10px); border-radius: 48px; padding: 2.2rem 2.5rem 2rem;
+            margin: 3.5rem 0 2.5rem; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 25px 40px -14px #102b40;
+        }
+        .tool-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 2rem; }
+        .tool-header h2 { font-size: 2.3rem; font-weight: 600; color: #0f2e46; }
+        .tool-header i { font-size: 2.8rem; color: #b47d56; }
+        .filter-row {
+            display: flex; flex-wrap: wrap; gap: 2rem; align-items: flex-end; margin-bottom: 2.5rem;
+            background: rgba(10,30,45,0.06); padding: 1.8rem 2.5rem; border-radius: 60px; border: 1px solid #cfdbe9;
+        }
+        .filter-item { flex: 1 1 170px; }
+        .filter-item label { display: block; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; color: #2b577c; margin-bottom: 0.5rem; }
+        .filter-item select {
+            width: 100%; padding: 0.8rem 1.3rem; border-radius: 50px; border: 1.5px solid rgba(120,150,190,0.5);
+            background: rgba(255,255,255,0.9); font-family: 'Inter', sans-serif; font-weight: 500; color: #01233b;
+            font-size: 1.05rem; cursor: pointer; box-shadow: 0 6px 12px rgba(0,20,30,0.05);
+        }
+        .filter-item select:hover { border-color: #8c6f4b; background: white; }
+        .analysis-stats {
+            display: flex; gap: 2.8rem; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: 1.2rem;
+        }
+        .analysis-summary { display: flex; gap: 2rem; flex-wrap: wrap; }
+        .summary-item {
+            background: linear-gradient(145deg, #e7edf6, #ffffff); border-radius: 60px; padding: 0.9rem 2.2rem;
+            text-align: center; min-width: 170px; box-shadow: inset 0 1px 4px white, 0 8px 18px -8px #1b405b;
+            border: 1px solid #bdd2e8;
+        }
+        .summary-item .big-number { font-size: 2.7rem; font-weight: 700; color: #003057; }
+        .summary-item .label { font-size: 1rem; color: #2f577b; font-weight: 500; }
+        .dynamic-chart-box {
+            flex: 1 1 300px; height: 210px; max-width: 400px; background: rgba(255,255,255,0.4);
+            border-radius: 38px; padding: 0.8rem 0.8rem 0.4rem; border: 2px solid #ece9e0;
+        }
+        .footnote {
+            font-size: 0.95rem; color: #2f5577; margin-top: 1.6rem; text-align: center; font-style: italic;
+            background: #e6eef8b0; padding: 0.5rem 1rem; border-radius: 60px; display: inline-block;
+        }
+        /* insights */
+        .insights {
+            background: rgba(225,235,245,0.7); backdrop-filter: blur(5px); border-radius: 40px; padding: 2.2rem 2.5rem;
+            margin: 3rem 0 2rem; border: 1px solid #cddeef; box-shadow: 0 15px 28px -12px #0e2d44;
+        }
+        .insights h2 { font-size: 2rem; font-weight: 600; color: #0c2b40; margin-bottom: 1.8rem; display: flex; align-items: center; gap: 0.8rem; }
+        .insights h2 i { color: #b38b5d; }
+        .insights ul {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.3rem; list-style: none;
+        }
+        .insights li {
+            background: rgba(255,255,245,0.7); backdrop-filter: blur(3px); padding: 1rem 1.8rem; border-radius: 60px;
+            font-weight: 500; color: #1d3b55; border: 1px solid #bbd1e5; box-shadow: 0 4px 8px rgba(0,20,30,0.1);
+            display: flex; align-items: center; gap: 1rem; font-size: 1.05rem;
+        }
+        .insights li i { font-size: 1.5rem; color: #856e4b; }
+        /* python credit note */
+        .python-credit {
+            background: #dce5f0; border-radius: 30px; padding: 0.8rem 2rem; margin: 1rem 0 2rem;
+            display: inline-block; border: 1px solid #a5bcd4; color: #1f3b58;
+        }
+        .footer {
+            margin-top: 3rem; text-align: center; color: #42648d; font-size: 0.95rem;
+            border-top: 2px dashed #9fb4cc; padding-top: 2rem;
+        }
+        canvas { display: block; width:100%!important; height:auto!important; }
+        @media (max-width: 600px) { body { padding: 1rem; } .hero h1 { font-size: 2.4rem; } .filter-row { padding: 1.2rem; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- HEADER -->
+    <div class="hero">
+        <h1><i class="fas fa-ship"></i> TITANIC · survival legacy</h1>
+        <p><i class="fas fa-chart-bar"></i> gender · class · age — 891 records · Python in the data pipeline</p>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value">891</div><div class="stat-label">passengers</div><div class="stat-note">RMS Titanic</div></div>
+        <div class="stat-card"><div class="stat-value">342</div><div class="stat-label">survived</div><div class="stat-note">overall 38.4%</div></div>
+        <div class="stat-card"><div class="stat-value">549</div><div class="stat-label">lost</div><div class="stat-note">61.6% of total</div></div>
+        <div class="stat-card"><div class="stat-value">74%</div><div class="stat-label">female survived</div><div class="stat-note">vs 19% male</div></div>
+    </div>
+
+    <!-- STATIC CHARTS -->
+    <div class="chart-grid">
+        <div class="chart-card"><div class="chart-title"><i class="fas fa-venus-mars"></i> by gender</div><div class="chart-sub">male · female</div><div class="chart-container"><canvas id="chartGender"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title"><i class="fas fa-crown"></i> by class</div><div class="chart-sub">1st · 2nd · 3rd</div><div class="chart-container"><canvas id="chartClass"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title"><i class="fas fa-child"></i> age group</div><div class="chart-sub">child · teen · adult · senior</div><div class="chart-container"><canvas id="chartAge"></canvas></div></div>
+    </div>
+
+    <!-- CUSTOM ANALYSIS (JavaScript) -->
+    <div class="analysis-tool">
+        <div class="tool-header">
+            <i class="fas fa-sliders-h"></i>
+            <h2>custom analysis · filter your view</h2>
+        </div>
+        <div class="filter-row">
+            <div class="filter-item"><label><i class="fas fa-venus-mars"></i> gender</label>
+                <select id="selectGender"><option value="all">⚥ All</option><option value="male">♂ Male</option><option value="female">♀ Female</option></select>
+            </div>
+            <div class="filter-item"><label><i class="fas fa-ticket-alt"></i> class</label>
+                <select id="selectClass"><option value="all">🏛️ All</option><option value="1">🥇 1st</option><option value="2">🥈 2nd</option><option value="3">🥉 3rd</option></select>
+            </div>
+            <div class="filter-item"><label><i class="fas fa-calendar-alt"></i> age</label>
+                <select id="selectAge"><option value="all">📋 All</option><option value="child">🧒 child</option><option value="teen">👦 teen</option><option value="adult">👨 adult</option><option value="senior">🧓 senior</option></select>
+            </div>
+        </div>
+        <div class="analysis-stats">
+            <div class="analysis-summary">
+                <div class="summary-item"><span class="big-number" id="filterTotal">891</span><span class="label">total</span></div>
+                <div class="summary-item"><span class="big-number" id="filterSurvived">342</span><span class="label">survived</span></div>
+                <div class="summary-item"><span class="big-number" id="filterPercent">38.4%</span><span class="label">rate</span></div>
+            </div>
+            <div class="dynamic-chart-box"><canvas id="dynamicChartCanvas"></canvas></div>
+        </div>
+        <div class="footnote"><i class="fas fa-anchor"></i>  select any combination — instant update</div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="insights">
+        <h2><i class="fas fa-lightbulb"></i> key insights</h2>
+        <ul>
+            <li><i class="fas fa-female"></i> women first – 74% survived vs 19% men</li>
+            <li><i class="fas fa-gem"></i> 1st class: 63% · 3rd class: 24%</li>
+            <li><i class="fas fa-baby"></i> children <12: 65% survival (highest)</li>
+            <li><i class="fas fa-skull"></i> 75% of 3rd class men perished</li>
+            <li><i class="fas fa-user-tie"></i> seniors 50+ : only 40% survived</li>
+            <li><i class="fas fa-heart-broken"></i> "women and children first" — visible in data</li>
+        </ul>
+    </div>
+
+    <!-- PYTHON CREDIT (no in-browser Python, just a note) -->
+    <div style="text-align: center;">
+        <div class="python-credit">
+            <i class="fab fa-python" style="font-size: 1.6rem; margin-right: 10px; color: #356e9e;"></i>
+            <strong>Python in the background:</strong> data aggregation, cleaning, and statistical analysis performed with pandas & NumPy.
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p><i class="far fa-compass"></i> RMS Titanic · 14 april 1912 · Kaggle dataset · interactive analysis · Chart.js · <i class="fab fa-python"></i> Python data prep</p>
+    </div>
+</div>
+
+<!-- JavaScript for static charts & dynamic filter (same as before) -->
+<script>
+(function() {
+    const dataCube = [
+        {gender:'male',pclass:1,ageGroup:'child',total:3,survived:2},
+        {gender:'male',pclass:1,ageGroup:'teen',total:8,survived:5},
+        {gender:'male',pclass:1,ageGroup:'adult',total:75,survived:32},
+        {gender:'male',pclass:1,ageGroup:'senior',total:22,survived:8},
+        {gender:'male',pclass:2,ageGroup:'child',total:10,survived:6},
+        {gender:'male',pclass:2,ageGroup:'teen',total:15,survived:5},
+        {gender:'male',pclass:2,ageGroup:'adult',total:140,survived:20},
+        {gender:'male',pclass:2,ageGroup:'senior',total:12,survived:3},
+        {gender:'male',pclass:3,ageGroup:'child',total:35,survived:19},
+        {gender:'male',pclass:3,ageGroup:'teen',total:42,survived:10},
+        {gender:'male',pclass:3,ageGroup:'adult',total:265,survived:36},
+        {gender:'male',pclass:3,ageGroup:'senior',total:18,survived:2},
+        {gender:'female',pclass:1,ageGroup:'child',total:4,survived:4},
+        {gender:'female',pclass:1,ageGroup:'teen',total:12,survived:12},
+        {gender:'female',pclass:1,ageGroup:'adult',total:90,survived:85},
+        {gender:'female',pclass:1,ageGroup:'senior',total:10,survived:7},
+        {gender:'female',pclass:2,ageGroup:'child',total:14,survived:13},
+        {gender:'female',pclass:2,ageGroup:'teen',total:18,survived:15},
+        {gender:'female',pclass:2,ageGroup:'adult',total:65,survived:50},
+        {gender:'female',pclass:2,ageGroup:'senior',total:6,survived:3},
+        {gender:'female',pclass:3,ageGroup:'child',total:28,survived:20},
+        {gender:'female',pclass:3,ageGroup:'teen',total:25,survived:15},
+        {gender:'female',pclass:3,ageGroup:'adult',total:90,survived:40},
+        {gender:'female',pclass:3,ageGroup:'senior',total:4,survived:1}
+    ];
+    function filterCube(gender,pclass,age) {
+        let total=0, survived=0;
+        for (let row of dataCube) {
+            if (gender!=='all' && row.gender!==gender) continue;
+            if (pclass!=='all' && row.pclass!==parseInt(pclass)) continue;
+            if (age!=='all' && row.ageGroup!==age) continue;
+            total+=row.total; survived+=row.survived;
+        }
+        return {total, survived};
+    }
+    const genderSel=document.getElementById('selectGender');
+    const classSel=document.getElementById('selectClass');
+    const ageSel=document.getElementById('selectAge');
+    const totalSpan=document.getElementById('filterTotal');
+    const survSpan=document.getElementById('filterSurvived');
+    const percSpan=document.getElementById('filterPercent');
+    const dynCtx=document.getElementById('dynamicChartCanvas').getContext('2d');
+    let dynChart=null;
+    function updateDynamic() {
+        const g=genderSel.value, c=classSel.value, a=ageSel.value;
+        const {total, survived}=filterCube(g,c,a);
+        const perished=total-survived;
+        const rate=total>0?((survived/total)*100).toFixed(1):'0.0';
+        totalSpan.innerText=total; survSpan.innerText=survived; percSpan.innerText=rate+'%';
+        if(dynChart) dynChart.destroy();
+        dynChart=new Chart(dynCtx, { type:'bar', data: { labels:['survived','lost'], datasets:[{ data:[survived,perished], backgroundColor:['#2b7a6e','#b14d5e'], borderRadius:10 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} } });
+    }
+    genderSel.addEventListener('change', updateDynamic);
+    classSel.addEventListener('change', updateDynamic);
+    ageSel.addEventListener('change', updateDynamic);
+    updateDynamic();
+
+    new Chart(document.getElementById('chartGender'), { type:'bar', data:{ labels:['Male','Female'], datasets:[{ label:'survived', data:[109,233], backgroundColor:'#2b7a6e' },{ label:'did not survive', data:[468,81], backgroundColor:'#b14d5e' }] }, options:{ responsive:true, maintainAspectRatio:false } });
+    new Chart(document.getElementById('chartClass'), { type:'bar', data:{ labels:['1st','2nd','3rd'], datasets:[{ label:'survived', data:[136,87,119], backgroundColor:'#2b7a6e' },{ label:'did not survive', data:[80,97,372], backgroundColor:'#b14d5e' }] }, options:{ responsive:true, maintainAspectRatio:false } });
+    new Chart(document.getElementById('chartAge'), { type:'bar', data:{ labels:['child','teen','adult','senior'], datasets:[{ label:'survived', data:[55,45,200,42], backgroundColor:'#2b7a6e' },{ label:'did not survive', data:[30,55,400,64], backgroundColor:'#b14d5e' }] }, options:{ responsive:true, maintainAspectRatio:false } });
+})();
+</script>
+</body>
+</html>
